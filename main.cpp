@@ -4,13 +4,6 @@
 int main()
 {
     //Start::Run();
-    LinAlg::V1u32 s1{2};
-    LinAlg::V1u32 s2{3};
-    LinAlg::V1u32 s3 = s1 + s2;
-    LinAlg::V1u32 s4{4};
-    s4 += s3;
-    printVec1(s3);
-    printVec1(s4);
     LinAlg::Mat2u8 mat1{2};
     printMatrix(mat1);
     LinAlg::Mat3f mat2{1.0222};
@@ -22,7 +15,27 @@ int main()
     printMatrix(mat5);
     mat5 -= mat2;
     printMatrix(mat5);
-    mat5 *= -1.0;
+    mat5 *= -3.0;
     printMatrix(mat5);
+    roundOff(mat5, 3);
+    printMatrix(mat5);
+
+
+    LinAlg::Mat2f m2f{};
+    printMatrix(m2f);
+
+
+    LinAlg::V2f vf2{3,5};
+    printVector(vf2);
+    LinAlg::V2f vf3{6,7};
+    vf3 -= vf2;
+    printVector(vf3);
+    LinAlg::V2f vf4 = vf3 + vf2;
+    printVector(vf4);
+    LinAlg::V3d v1{1.99999,3.199999,1.999222};
+    roundOff(v1, 3);
+    printVector(v1);
+    v1 *= 2;
+    printVector(v1);
 
 }

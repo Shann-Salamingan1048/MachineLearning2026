@@ -197,6 +197,19 @@ namespace LinAlg
             );
             return *this;
         }
+    public:
+        friend void roundOff(Matrix& mat, uint8_t decimalDigit) noexcept
+        {
+            auto TenPower = TenRaise(decimalDigit);
+            std::ranges::transform(
+                mat.m_matrixArr | std::views::join,
+                (mat.m_matrixArr | std::views::join).begin(),
+                [TenPower](Number n)
+                {
+                    return std::round(n * TenPower) / TenPower;
+                }
+            );
+        }
     private:
         std::array<std::array<Number, size>, size> m_matrixArr{T_zero_init<Number>()};
         static constexpr std::pair<uint8_t, uint8_t> MATRIX_SIZES_LIMITS{2,3};
