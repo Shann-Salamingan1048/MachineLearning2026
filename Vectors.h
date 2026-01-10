@@ -6,100 +6,118 @@
 
 namespace LinAlg
 {
+    template <typename T>
+    concept VectorLike = requires(T t)
+    {
+        // REQUIREMENT 1: member variable 'data' must exist.
+        // If T is 'int', 'int.data' is invalid -> Concept fails (returns false).
+        // If T is 'Vector', 'Vector.data' is valid -> Concept passes (returns true).
+        t.data;
+    };
     // Uses CRTP: "Derived" lets the base class know who inherits it
     template<typename Derived, size_t size, typename Number>
     struct VectorBase
     {
         // data() -> it will find the member variable named "data" of the derived/child class
         // Helper to access the actual data in the Derived class
-        constexpr const auto& data() const { return static_cast<const Derived*>(this)->data; }
-        constexpr auto& data() { return static_cast<Derived*>(this)->data; }
-
-        Derived operator+(Number scalar)
+        //constexpr const auto& data(this const auto& self){return self.data;}
+        //constexpr auto& data(this auto& self){return self.data;}
+        // Addition
+        constexpr auto operator+(this const auto& self, Number scalar) -> Derived
         {
-            Derived result;
-            std::ranges::transform(this->data(),
-                result->data().begin(),
-                [scalar](Number n) {return n + scalar;});
+            auto result = self;
+            self += scalar;
             return result;
         }
-        Derived& operator+=(Number scalar)
+        constexpr auto operator+=(this auto& self, Number scalar) -> Derived&
         {
-            std::ranges::transform(this->data(),
-                this->data().begin(),
-                [scalar](Number n) {return n + scalar;});
-            return *static_cast<Derived*>(this);
+            for (auto& n : self.data) n += scalar;
+            return self;
         }
-        Derived& operator+=(const Derived& other)
+        constexpr auto operator+=(this auto& self, const VectorLike auto& other) -> Derived&
         {
-            std::ranges::transform(other.data, this->data(), this->data().begin(), std::plus{});
-            return *static_cast<Derived*>(this);
+            for (size_t i = 0; i < other.data.size(); ++i)
+                self.data[i] = self.data[i] + other.data[i];
+            return self;
         }
-        friend Derived operator+(const Derived& other, const Derived& other2)
+        friend constexpr auto operator+(const auto& self, const auto& other) -> Derived
         {
-            Derived result;
-            std::ranges::transform(other.data, other2.data, result.data.begin(), std::plus{});
+            auto result = self;
+            result += other;
             return result;
         }
-        Derived operator-(Number scalar)
+        friend constexpr auto operator+(const auto& self, Number scalar) -> Derived
         {
-            Derived result;
-            std::ranges::transform(this->data(),
-                result->data().begin(),
-                [scalar](Number n) {return n - scalar;});
+            auto result = self;
+            result += scalar;
             return result;
         }
-        Derived& operator-=(Number scalar)
+        // Subtraction
+        constexpr auto operator-(this const auto& self, Number scalar) -> Derived
         {
-            std::ranges::transform(this->data(),
-                this->data().begin(),
-                [scalar](Number n) {return n - scalar;});
-            return *static_cast<Derived*>(this);
-        }
-        Derived& operator-=(const Derived& other)
-        {
-            std::ranges::transform(this->data(), other.data, this->data().begin(), std::minus{});
-            return *static_cast<Derived*>(this);
-        }
-        friend Derived operator-(const Derived& other, const Derived& other2)
-        {
-            Derived result;
-            std::ranges::transform(other.data, other2.data, result.data.begin(), std::minus<Number>{});
+            auto result = self;
+            self -= scalar;
             return result;
         }
-        Derived operator*(Number scalar)
+        constexpr auto operator-=(this auto& self, Number scalar) -> Derived&
         {
-            Derived result;
-            std::ranges::transform(this->data(),
-                result->data().begin(),
-                [scalar](Number n) {return n * scalar;});
+            for (auto& n : self.data) n -= scalar;
+            return self;
+        }
+        constexpr auto operator-=(this auto& self, const VectorLike auto& other) -> Derived&
+        {
+            for (size_t i = 0; i < other.data.size(); ++i)
+                self.data[i] = self.data[i] - other.data[i];
+            return self;
+        }
+        friend constexpr auto operator-(const auto& self, const auto& other) -> Derived
+        {
+            auto result = self;
+            result -= other;
             return result;
         }
-        Derived& operator*=(Number scalar)
+        friend constexpr auto operator-(const auto& self, Number scalar) -> Derived
         {
-            std::ranges::transform(this->data(),
-                this->data().begin(),
-                [scalar](Number n) {return n * scalar;});
-            return *static_cast<Derived*>(this);
+            auto result = self;
+            result -= scalar;
+            return result;
         }
-        Derived& operator*=(const Derived& other)
+        // Multiplication
+        constexpr auto operator*(this const auto& self, Number scalar) -> Derived
         {
-            //std::ranges::transform(other.data, this->data(), this->data().begin(), std::plus{});
-            std::ranges::transform(other.data, this->data(), this->data().begin(), std::multiplies{});
-            return *static_cast<Derived*>(this);
+            auto result = self;
+            self *= scalar;
+            return result;
         }
-        friend Derived operator*(const Derived& other, const Derived& other2)
+        constexpr auto operator*=(this auto& self, Number scalar) -> Derived&
         {
-            Derived result;
-            std::ranges::transform(other.data, other2.data, result.data.begin(), std::multiplies{});
+            for (auto& n : self.data) n *= scalar;
+            return self;
+        }
+        constexpr auto operator*=(this auto& self, const VectorLike auto& other) -> Derived&
+        {
+            for (size_t i = 0; i < other.data.size(); ++i)
+                self.data[i] = self.data[i] * other.data[i];
+            return self;
+        }
+        friend constexpr auto operator*(const auto& self, const auto& other) -> Derived
+        {
+            auto result = self;
+            result *= other;
+            return result;
+        }
+        friend constexpr auto operator*(const auto& self, Number scalar) -> Derived
+        {
+            auto result = self;
+            result *= scalar;
             return result;
         }
     };
 
     template<size_t size, Numeric Number>
-    struct Vector : public VectorBase<Vector<size, Number>, size, Number>
+    struct Vector : public VectorBase<Vector<size, Number>,size, Number>
     {
-        std::array<Number, size> data;
+        std::array<Number, size> data{T_zero_init<Number>()};
         // 1. Mutable versions (Existing)
         // Accessors (instead of raw x, y, z members)
         /*
@@ -129,15 +147,19 @@ namespace LinAlg
         {
             if constexpr  (size == 3)
             {
-                std::println("Vector{}: x = {}, y = {}, z = {}", size, v.x(), v.y() , v.z());
+                std::println("Vector{}: x = {}, y = {}, z = {}\n", size, v.x(), v.y() , v.z());
             }
             else if constexpr(size == 2)
             {
-                std::println("Vector{}: x = {}, y = {}", size, v.x(), v.y());
+                std::println("Vector{}: x = {}, y = {}\n", size, v.x(), v.y());
             }
             else if constexpr(size == 1)
             {
-                std::println("Vector{}: x = {}", size, v.x());
+                std::println("Vector{}: x = {}\n", size, v.x());
+            }
+            else
+            {
+                std::println("Vector{}: {}", size, v.data);
             }
         }
         friend void roundOff(Vector& v,uint8_t decimalDigit) noexcept
@@ -186,4 +208,26 @@ namespace LinAlg
     using V3st      =    Vector<3, size_t>;
     using V3f       =    Vector<3, float>;
     using V3d       =    Vector<3, double>;
+
+    using V4u8      =    Vector<4, uint8_t>;
+    using V4u16     =    Vector<4, uint16_t>;
+    using V4u32     =    Vector<4, uint32_t>;
+    using V4u64     =    Vector<4, uint64_t>;
+    using V4s       =    Vector<4, short>;
+    using V4i       =    Vector<4, int>;
+    using V4l       =    Vector<4, long>;
+    using V4st      =    Vector<4, size_t>;
+    using V4f       =    Vector<4, float>;
+    using V4d       =    Vector<4, double>;
+
+    using V10u8      =    Vector<10, uint8_t>;
+    using V10u16     =    Vector<10, uint16_t>;
+    using V10u32     =    Vector<10, uint32_t>;
+    using V10u64     =    Vector<10, uint64_t>;
+    using V10s       =    Vector<10, short>;
+    using V10i       =    Vector<10, int>;
+    using V10l       =    Vector<10, long>;
+    using V10st      =    Vector<10, size_t>;
+    using V10f       =    Vector<10, float>;
+    using V10d       =    Vector<10, double>;
 }

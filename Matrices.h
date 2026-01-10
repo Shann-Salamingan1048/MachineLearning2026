@@ -16,10 +16,14 @@ namespace LinAlg
         Matrix& operator=(const Matrix& other) noexcept = default;
         Matrix& operator=(Matrix&& other) noexcept = default;
         ~Matrix() = default;
-
+        explicit Matrix(std::initializer_list<std::initializer_list<Number>> init)
+        {
+            auto input_view = init | std::views::join | std::views::take(size * size);
+            std::ranges::copy(input_view, this->flat().begin());
+        }
         explicit Matrix(Number scalar) noexcept
         {
-            std::ranges::fill(m_matrixArr | std::views::join, scalar);
+            std::ranges::fill(this->flat(), scalar);
         }
         friend void printMatrix(const Matrix& mat) noexcept
         {
@@ -31,66 +35,33 @@ namespace LinAlg
             std::println();
         }
     public:
-        Matrix operator+(const Matrix& other) noexcept
+        friend constexpr auto operator+(const Matrix& other, const Matrix& other2) noexcept -> Matrix
         {
-            // Left-Hand Side = LHS, Right-Hand Size = RHS
             Matrix result;
-            // Flattened means
-            // Row1: [1,2,3], Row2: [4,5,6]
-            // Sequence: [1,2,3,4,5,6]
-
-            // Create a "view" of the current object's (LHS) 2D array.
-            // "std::views::join" treats the 2D array as a single continuous 1D sequence.
-            auto self_flat = m_matrixArr | std::views::join;
-            // Create a flattened view of the "other" object's (RHS) 2D array.
-            auto other_flat = other.m_matrixArr | std::views::join;
-
-            // Create a flattened view of the "result" matrix so we can write to it linearly.
-            auto result_flat = result.m_matrixArr | std::views::join;
-            // Perform the addition using the standard library algorithm.
             std::ranges::transform(
-                self_flat,           // Input Range 1: The flattened Left-Hand Side matrix.
-                other_flat,          // Input Range 2: The flattened Right-Hand Side matrix.
-                result_flat.begin(), // Output Iterator: Where to start writing the results.
+                other.flat(),           // Input Range 1: The flattened Left-Hand Side matrix.
+                other2.flat(),          // Input Range 2: The flattened Right-Hand Side matrix.
+                result.flat().begin(), // Output Iterator: Where to start writing the results.
                 std::plus{}          // The Operation: A standard functor that performs addition (x + y).
             );
             return result;
         }
-        Matrix operator+=(const Matrix& other) noexcept
+        constexpr auto operator+=(this auto& self,const Matrix& other) noexcept -> Matrix&
         {
-            auto self_flat = m_matrixArr | std::views::join;
-            auto other_flat = other.m_matrixArr | std::views::join;
-            //auto result_flat = m_matrixArr | std::views::join;
-            // Perform the addition using the standard library algorithm.
             std::ranges::transform(
-                self_flat,           // Input Range 1: The flattened Left-Hand Side matrix.
-                other_flat,          // Input Range 2: The flattened Right-Hand Side matrix.
-                self_flat.begin(), // Output Iterator: Where to start writing the results.
+                self.flat(),           // Input Range 1: The flattened Left-Hand Side matrix.
+                other.flat(),          // Input Range 2: The flattened Right-Hand Side matrix.
+                self.flat().begin(), // Output Iterator: Where to start writing the results.
                 std::plus{}          // The Operation: A standard functor that performs addition (x + y).
             );
-            return *this;
+            return self;
         }
-        Matrix operator+(Number scalar) noexcept
+        constexpr auto operator+(this auto& self, Number scalar) noexcept -> Matrix
         {
-            // Left-Hand Side = LHS, Right-Hand Size = RHS
             Matrix result;
             std::ranges::transform(
-                // 4. THE INPUT (Source)
-                // 'm_matrixArr' is 2D (array inside array).
-                // The pipe '|' passes the array into 'views::join'.
-                // 'join' creates a virtual "view" that looks like a flat 1D line of numbers.
-                // It allows us to read [row1_col1, row1_col2, row2_col1...] sequentially.
-                m_matrixArr | std::views::join,
-                // 5. THE OUTPUT (Destination Iterator)
-                // We need to tell 'transform' where to START writing in the 'result' matrix.
-                // We must also 'join' the result matrix so the structure matches the input.
-                // .begin() gives us the pointer to the very first slot of that flattened view.
-                (result.m_matrixArr | std::views::join).begin(),
-
-                // 6. THE OPERATION (Lambda)
-                // [scalar]: We "capture" the variable 'scalar' from the function arguments
-                //           so we can use it inside this small lambda function.
-                // (Number n): 'transform' passes the current number from the Input here.
+                self.flat(),
+                result.flat().begin(),
                 [scalar](Number n)
                 {
                     // We return the sum, which 'transform' writes into the Output location.
@@ -99,103 +70,94 @@ namespace LinAlg
             );
             return result;
         }
-        Matrix& operator+=(Number scalar) noexcept
+        constexpr auto operator+=(this auto& self, Number scalar) noexcept -> Matrix&
         {
             std::ranges::transform(
-                m_matrixArr | std::views::join,
-                (m_matrixArr | std::views::join).begin(),
+                self.flat(),
+                self.flat().begin(),
                 [scalar](Number n)
                 {
                     return n + scalar;
                 }
             );
-            return *this;
+            return self;
         }
     public:
-        Matrix operator-(const Matrix& other) noexcept
+        friend constexpr auto operator-(const Matrix& other, const Matrix& other2) noexcept -> Matrix
+        {
+            Matrix result;
+            std::ranges::transform(
+                other.flat(),           // Input Range 1: The flattened Left-Hand Side matrix.
+                other2.flat(),          // Input Range 2: The flattened Right-Hand Side matrix.
+                result.flat().begin(), // Output Iterator: Where to start writing the results.
+                std::minus{}          // The Operation: A standard functor that performs addition (x + y).
+            );
+            return result;
+        }
+        constexpr auto operator-=(this auto& self,const Matrix& other) noexcept -> Matrix&
+        {
+            std::ranges::transform(
+                self.flat(),           // Input Range 1: The flattened Left-Hand Side matrix.
+                other.flat(),          // Input Range 2: The flattened Right-Hand Side matrix.
+                self.flat().begin(), // Output Iterator: Where to start writing the results.
+                std::minus{}          // The Operation: A standard functor that performs addition (x + y).
+            );
+            return self;
+        }
+        constexpr auto operator-(this auto& self, Number scalar) noexcept -> Matrix
         {
             // Left-Hand Side = LHS, Right-Hand Size = RHS
             Matrix result;
-            auto self_flat = m_matrixArr | std::views::join;
-
-            // Create a flattened view of the "other" object's (RHS) 2D array.
-            auto other_flat = other.m_matrixArr | std::views::join;
-
-            // Create a flattened view of the "result" matrix so we can write to it linearly.
-            auto result_flat = result.m_matrixArr | std::views::join;
-            // Perform the addition using the standard library algorithm.
             std::ranges::transform(
-                self_flat,           // Input Range 1: The flattened Left-Hand Side matrix.
-                other_flat,          // Input Range 2: The flattened Right-Hand Side matrix.
-                result_flat.begin(), // Output Iterator: Where to start writing the results.
-                std::minus{}          // The Operation: A standard functor that performs addition (x + y).
-            );
-            return result;
-        }
-        Matrix operator-=(const Matrix& other) noexcept
-        {
-            auto self_flat = m_matrixArr | std::views::join;
-            auto other_flat = other.m_matrixArr | std::views::join;
-            //auto result_flat = m_matrixArr | std::views::join;
-            // Perform the addition using the standard library algorithm.
-            std::ranges::transform(
-                self_flat,           // Input Range 1: The flattened Left-Hand Side matrix.
-                other_flat,          // Input Range 2: The flattened Right-Hand Side matrix.
-                self_flat.begin(), // Output Iterator: Where to start writing the results.
-                std::minus{}          // The Operation: A standard functor that performs addition (x + y).
-            );
-            return *this;
-        }
-        Matrix operator-(Number scalar) noexcept
-        {
-            Matrix result;
-            std::ranges::transform(
-                m_matrixArr | std::views::join,
-                (result.m_matrixArr | std::views::join).begin(),
+                self.flat(),
+                result.flat().begin(),
                 [scalar](Number n)
                 {
+                    // We return the sum, which 'transform' writes into the Output location.
                     return n - scalar;
                 }
             );
             return result;
         }
-        Matrix& operator-=(Number scalar) noexcept
+        constexpr auto operator-=(this auto& self, Number scalar) noexcept -> Matrix&
         {
             std::ranges::transform(
-                m_matrixArr | std::views::join,
-                (m_matrixArr | std::views::join).begin(),
+                self.flat(),
+                self.flat().begin(),
                 [scalar](Number n)
                 {
                     return n - scalar;
                 }
             );
-            return *this;
+            return self;
         }
     public:
-        Matrix operator*(Number scalar) noexcept
+        constexpr auto operator*(this auto& self, Number scalar) noexcept -> Matrix
         {
+            // Left-Hand Side = LHS, Right-Hand Size = RHS
             Matrix result;
             std::ranges::transform(
-                m_matrixArr | std::views::join,
-                (result.m_matrixArr | std::views::join).begin(),
+                self.flat(),
+                result.flat().begin(),
                 [scalar](Number n)
                 {
+                    // We return the sum, which 'transform' writes into the Output location.
                     return n * scalar;
                 }
             );
             return result;
         }
-        Matrix& operator*=(Number scalar) noexcept
+        constexpr auto operator*=(this auto& self, Number scalar) noexcept -> Matrix&
         {
             std::ranges::transform(
-                m_matrixArr | std::views::join,
-                (m_matrixArr | std::views::join).begin(),
+                self.flat(),
+                self.flat().begin(),
                 [scalar](Number n)
                 {
                     return n * scalar;
                 }
             );
-            return *this;
+            return self;
         }
     public:
         friend void roundOff(Matrix& mat, uint8_t decimalDigit) noexcept
@@ -211,8 +173,13 @@ namespace LinAlg
             );
         }
     private:
+        constexpr auto flat(this auto&& self) {return self.m_matrixArr | std::views::join;};
+        // "std::views::join" treats the 2D array as a single continuous 1D sequence.
+        // Flattened means
+        // Row1: [1,2,3], Row2: [4,5,6]
+        // Sequence: [1,2,3,4,5,6]
         std::array<std::array<Number, size>, size> m_matrixArr{T_zero_init<Number>()};
-        static constexpr std::pair<uint8_t, uint8_t> MATRIX_SIZES_LIMITS{2,3};
+        static constexpr std::pair<uint8_t, uint8_t> MATRIX_SIZES_LIMITS{2,5};
         static_assert(size >= MATRIX_SIZES_LIMITS.first && size <= MATRIX_SIZES_LIMITS.second, "Not Valid Size!");
 
     };
@@ -239,4 +206,25 @@ namespace LinAlg
     using Mat3f         =  Matrix<3, float>;
     using Mat3d         =  Matrix<3, double>;
 
+    using Mat4u8        =  Matrix<4, uint8_t>;
+    using Mat4u16       =  Matrix<4, uint16_t>;
+    using Mat4u32       =  Matrix<4, uint32_t>;
+    using Mat4u64       =  Matrix<4, uint64_t>;
+    using Mat4s         =  Matrix<4, short>;
+    using Mat4i         =  Matrix<4, int>;
+    using Mat4l         =  Matrix<4, long>;
+    using Mat4st        =  Matrix<4, size_t>;
+    using Mat4f         =  Matrix<4, float>;
+    using Mat4d         =  Matrix<4, double>;
+
+    using Mat5u8        =  Matrix<5, uint8_t>;
+    using Mat5u16       =  Matrix<5, uint16_t>;
+    using Mat5u32       =  Matrix<5, uint32_t>;
+    using Mat5u64       =  Matrix<5, uint64_t>;
+    using Mat5s         =  Matrix<5, short>;
+    using Mat5i         =  Matrix<5, int>;
+    using Mat5l         =  Matrix<5, long>;
+    using Mat5st        =  Matrix<5, size_t>;
+    using Mat5f         =  Matrix<5, float>;
+    using Mat5d         =  Matrix<5, double>;
 }
